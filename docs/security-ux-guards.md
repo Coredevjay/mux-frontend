@@ -392,6 +392,22 @@ Automated coverage for these invariants lives in `tests/e2e/` (including
 See `README.md` and `tests/e2e/` for how to run the suite.
 
 
+## Login logging, faucet gating, balance refresh, and dark-mode contrast
+
+- `/api/auth/login` (`src/app/api/auth/login/route.ts`) never logs request
+  bodies, passwords, tokens, or cookies. Logs carry only the correlation id,
+  a stable `AUTH_LOGIN_*` error code, and a masked email. Upstream failures
+  fail closed with `AUTH_LOGIN_UPSTREAM_UNAVAILABLE` and no session cookie.
+- The faucet CTA is gated by `shouldShowFaucet` (`src/utils/faucet.ts`): it is
+  hidden on mainnet and on unknown/missing networks. Set
+  `NEXT_PUBLIC_FAUCET_ENABLED=false` as a kill switch on every network.
+- Balances refresh via `useBalanceRefresh` (`src/utils/balance-refresh.ts`),
+  which keeps the last known balance visible while refreshing or on failure
+  and drops out-of-order responses.
+- Dark-mode text/background pairs live in `src/utils/contrast.ts` and are
+  asserted to meet WCAG AA (4.5:1) by `src/utils/contrast.test.ts`. Add new
+  dark-mode color pairs there.
+
 ## Network badge contrast (#826)
 
 `src/components/NetworkBadge.tsx` renders the active network with color pairs
@@ -622,4 +638,3 @@ Coverage for these invariants lives in `tests/e2e/` (including
   and the empty state is shown and announced when there are none
 
 See `README.md` and `tests/e2e/` for how to run the suite.
-
