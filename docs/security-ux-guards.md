@@ -392,6 +392,40 @@ Automated coverage for these invariants lives in `tests/e2e/` (including
 See `README.md` and `tests/e2e/` for how to run the suite.
 
 
+## Network badge contrast (#826)
+
+`src/components/NetworkBadge.tsx` renders the active network with color pairs
+that meet WCAG 2.1 AA (>= 4.5:1). The network is always stated in text, never
+by color alone, and an unrecognized network fails closed to an "Unknown
+network" warning style so mainnet/testnet misconfiguration is visible.
+
+## Disable CTAs while in-flight (#828)
+
+Money-path buttons use `useInFlightAction` (`src/utils/in-flight-action.ts`).
+While a request is pending the CTA is `disabled` and `aria-busy`, and repeat
+invocations are dropped by a ref guard so a double-click cannot submit twice.
+This complements (not replaces) server-side idempotency keys.
+
+## Limits validation mirrors server (#832)
+
+`validateLimits` (`src/utils/limits-validation.ts`) mirrors server rules:
+required, numeric, non-negative, <= 7 decimals (stroops), <= int64 stroops,
+`perTransaction <= daily <= monthly`, and unknown keys denied. Errors use
+stable `LIMIT_*` codes. The server remains the source of truth; client
+validation only gives earlier feedback.
+
+## todayUsage refresh without stampede (#833)
+
+`createTodayUsageRefresher` (`src/utils/today-usage-refresh.ts`) collapses
+concurrent refreshes into one in-flight request per key, serves fresh values
+from a short TTL cache, never caches failures as success
+(`USAGE_DEPENDENCY_UNAVAILABLE` with a correlation id), and rate-limits retries
+after failure (`USAGE_RATE_LIMITED`). An optional `onMetric` hook reports
+hit/miss/shared/error counts without logging key material.
+
+**Rollback:** each change is additive and unused by existing flows until wired
+in; reverting the commit removes it with no data migration.
+
 ## CSRF strategy
 
 The session cookie is HttpOnly + `SameSite=Lax`, which blocks most cross-site
@@ -577,3 +611,15 @@ kill switch.
   mapping, log redaction).
 - E2E: `tests/e2e/send-flow-flags.spec.ts`,
   `tests/e2e/audit-log-pagination.spec.ts`.
+
+Coverage for these invariants lives in `tests/e2e/` (including
+`tests/e2e/real-backend/`). Required cases:
+
+- cookie parity: login set attributes match logout clear attributes
+- auth negatives: expired session, tampered cookie, revoked delegate
+- idempotency: replayed request does not double-execute
+- notifications: list renders, mark-as-read and clear-all are idempotent,
+  and the empty state is shown and announced when there are none
+
+See `README.md` and `tests/e2e/` for how to run the suite.
+
